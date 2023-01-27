@@ -1,2 +1,2 @@
-# draconis
+# Draconis
 Telegram game bot
