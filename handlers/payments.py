@@ -72,9 +72,9 @@ async def buy_5000_dracoins(callback: types.CallbackQuery):
 
 @dp.message_handler(commands=['donate'])
 async def donate(message: types.Message):
-  if message.from_user.id not in admins:
-    await send(message, 'В ближайшее время донаты станут доступны, но не сейчас ;(\nМы сообщим, когда эта возможность появится.')
-    return
+  # if message.from_user.id not in admins:
+  #   await send(message, 'В ближайшее время донаты станут доступны, но не сейчас ;(\nМы сообщим, когда эта возможность появится.')
+  #   return
 
   # photo = types.InputFile('images/draconis.png')
   # await bot.send_photo(chat_id=message.from_user.id, photo=photo)
@@ -155,19 +155,19 @@ def create_payment(amount, dracoins):
 def create_keyboard():
   keyboard = types.InlineKeyboardMarkup()
   keyboard.add(types.InlineKeyboardButton(
-    text='500 дракоинов',
+    text='500 дракоинов [50 RUB]',
     callback_data='500')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='1000 дракоинов',
+    text='1000 дракоинов [95 RUB]',
     callback_data='1000')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='2500 дракоинов',
+    text='2500 дракоинов [230 RUB]',
     callback_data='2500')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='5000 дракоинов',
+    text='5000 дракоинов [445 RUB]',
     callback_data='5000')
   )
   return keyboard
