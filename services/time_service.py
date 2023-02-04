@@ -4,7 +4,7 @@ from services.db_service import db_service
 from consts.db_keys import USERS_DB_KEY
 from misc import bot
 
-event_hours = 12
+event_hours = 13
 
 def get_delta():
   now = datetime.now()
@@ -24,7 +24,11 @@ def get_delta():
   return next_time.timestamp() - now.timestamp()
 
 async def send_message(user_id, text):
-  await bot.send_message(user_id, text, parse_mode='html')
+  try:
+    await bot.send_message(user_id, text, parse_mode='html')
+  except:
+    # TODO: Удалять данные этих пользователей из базы
+    print(f'ERR: Bot was blocked by user. User ID: {user_id}')
 
 async def add_dracoins(user_id, user):
   dracoins = user['dracoins'] + 100

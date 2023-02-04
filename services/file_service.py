@@ -31,4 +31,4 @@ class FileService:
       print('Error: cannot read text file.')
     return text
 
-fileService = FileService()
+file_service = FileService()

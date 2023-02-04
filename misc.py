@@ -8,8 +8,10 @@ async def set_menu():
   await dp.bot.set_my_commands([
     types.BotCommand('/dragons', 'Драконы'),
     types.BotCommand('/leaderboard', 'Лидерборд'),
+    types.BotCommand('/princess', 'Где принцесса?'),
     types.BotCommand('/dracoins', 'Дракоины'),
-    types.BotCommand('/market', 'Таверна'),
     types.BotCommand('/ref', 'Пригласить друга'),
+    types.BotCommand('/market', 'Таверна'),
+    types.BotCommand('/rules', 'Правила игры'),
     types.BotCommand('/eggs', 'Яйца'),
   ])

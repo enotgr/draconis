@@ -1,20 +1,21 @@
 from misc import bot, dp
 from services.db_service import db_service
+from services.file_service import file_service
 from services.time_service import get_delta
 from utils.handler_utils import send
-from consts.db_keys import USERS_DB_KEY, DRAGONS_DB_KEY
+from consts.db_keys import USERS_DB_KEY, DRAGONS_DB_KEY, PRINCESS_DB_KEY
 from consts.admins import admins
 from consts.dragon_types import dragon_types, dragon_types_titles
 from consts.dragon_genuses import dragon_genuses, dragon_genuses_titles
 from consts.dragon_sex import dragon_sex, dragons_sex_titles
 from consts.dragon_statuses import dragon_statuses, dragon_statuses_titles
+from consts.common import start_words, egg_price
 from aiogram.utils.deep_linking import get_start_link
-from aiogram.types import InputFile
+from aiogram.utils.exceptions import BotBlocked
+from aiogram.types import InputFile, Update
 from asyncio import sleep
 from random import randint
 import time
-
-egg_price = 1000
 
 @dp.message_handler(commands=['start'])
 async def send_welcome(message):
@@ -24,6 +25,10 @@ async def send_welcome(message):
   username = user_info.username
   first_name = user_info.first_name
   name = first_name if first_name else username
+
+  await rules(message)
+  await bot.send_chat_action(message.from_user.id, 'typing')
+  await sleep(3)
 
   if not add_user_to_db(id, username):
     await send(message, 'Ну, привет, {0}.'.format(name))
@@ -35,6 +40,14 @@ async def send_welcome(message):
   await send(message, '<i><b>Странник:</b>\n- Приветствую, <b>{0}</b>!\nТы проделал длинный путь, чтобы найти меня. За это я дарю тебе свое яйцо.</i>'.format(name))
   await send(message, 'Ваш инвентарь был пополнен.\n\n/eggs - Проверить яйца')
 
+@dp.message_handler(commands=['rules', 'help', 'info'])
+async def rules(message):
+  rules = file_service.getTextFileByPath('texts/rules.txt')
+  if not rules:
+    print('ERR: Invalid rules file')
+    return
+  await send(message, rules)
+
 @dp.message_handler(commands=['ref'])
 async def ref(message):
   link = await get_start_link(message.from_user.id)
@@ -42,6 +55,8 @@ async def ref(message):
 
 @dp.message_handler(commands=['image'])
 async def img(message):
+  await bot.send_chat_action(message.from_user.id, 'upload_photo')
+  await sleep(1)
   photo = InputFile('images/draconis.png')
   await bot.send_photo(chat_id=message.from_user.id, photo=photo)
 
@@ -51,6 +66,7 @@ async def dice(message):
   result = response['dice']['value']
   await sleep(3)
   await bot.send_message(message.from_user.id, f'Результат броска: {result}')
+  return result
 
 @dp.message_handler(commands=['eggs'])
 async def eggs(message):
@@ -234,13 +250,23 @@ async def fight(message):
     await send(message, '{0} мертв. Он не может драться. Он уже ничего не может...\n\n/rip_dragon_{1} - Сжечь дракона\n/dragons - Мои драконы'.format(dragon_name, dragon_number))
     return
 
-  response = await bot.send_dice(message.from_user.id)
-  fight_result = response['dice']['value']
-  await sleep(3)
-  await bot.send_message(message.from_user.id, f'Результат броска: {fight_result}')
+  # response = await bot.send_dice(message.from_user.id)
+  fight_result = await dice(message)
+  # await sleep(3)
+  # await send(message, f'Результат броска: {fight_result}')
+
+  princess = db_service.get_db(PRINCESS_DB_KEY)
+  if not princess:
+    print('ERR: Princess was not exist')
+    princess = get_default_princess()
+    db_service.save_db(PRINCESS_DB_KEY, princess)
+
+  win_value = 4
+  if princess['owner_id'] == message.from_user.id:
+    win_value = 3
 
   text = ''
-  if fight_result < 4:
+  if fight_result < win_value:
     text += '{0} проиграл.\n'.format(dragon_name)
     if dragon['status'] == dragon_statuses[1]:
       dragon['status'] = dragon_statuses[2]
@@ -253,11 +279,31 @@ async def fight(message):
     db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
     return
   text += '{0} вернулся с победой!\n'.format(dragon_name)
-  earnings = randint(50, 150)
+  earnings = randint(30, 90)
   user['dracoins'] = user['dracoins'] + earnings
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
   text += '{0} принес с собой {1}!\n\n/dragon_{2} - {0}\n/dragons - Мои драконы'.format(dragon_name, get_dracoins_text(earnings), dragon_number)
   await send(message, text)
+
+  princess_random = randint(0, 100)
+  print(f'INFO: @{user["username"]} is trying luck. Received value:', princess_random)
+  if princess_random != 77:
+    return
+
+  old_owner_id = princess['owner_id']
+  if message.from_user.id == old_owner_id:
+    # TODO: можно добавить дополнительный успех в виде дракоинов или даже яйца
+    return
+
+  if old_owner_id != 0:
+    loss_text = '<b>Принцесса исчезла!</b>\nПринцесса, которая когда-то была под вашим крылом, теперь исчезла, оставив вас с тяжелым сердцем. Она была захвачена другим игроком и теперь вне вашей досягаемости.\n\n'
+    loss_text += '<b>-1 к удаче.</b>\nУдача покинула вас. Теперь, если при броске кости выпадет число меньше <b>4</b>, ваш дракон будет побежден.'
+    await bot.send_message(old_owner_id, loss_text, parse_mode='html')
+
+  set_princess(message.from_user.id, user['username'])
+  text_princess = '<b>Принцесса с вами!</b>\nДракон вернулся с поля битвы не только с сокровищами, но и с прекрасной принцессой, которая теперь под вашим крылом!\n\n'
+  text_princess += '<b>+1 удаче!</b>\nТеперь, если при броске кости выпадет <b>3</b>, <b>4</b>, <b>5</b> или <b>6</b>, дракон вернётся с победой!\n\n/princess - Где принцесса?'
+  await send(message, text_princess)
 
 @dp.message_handler(commands=['feed_dragon_1', 'feed_dragon_2', 'feed_dragon_3', 'feed_dragon_4', 'feed_dragon_5', 'feed_dragon_6', 'feed_dragon_7'])
 async def feed(message):
@@ -357,7 +403,7 @@ async def rip(message):
   db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, {})
   dragon_name = dragon['name'] if dragon['name'] else get_dragon_genus_title(dragon['type'], dragon['genus'])
 
-  text = '{0} отправился в последнее путешествие. Его тело залилось огненной краской, ветер рассеял его пепел в воздухе.\n'.format(dragon_name)
+  text = '{0} отправился в последнее путешествие. Его тело залилось огненной краской, ветер рассеял его пепел в воздухе. Прощай, {0}.\n'.format(dragon_name)
 
   if len(dragons) == 0 and user['eggs'] == 0:
     user['eggs'] = 1
@@ -368,6 +414,7 @@ async def rip(message):
 
 @dp.message_handler(commands=['leaderboard'])
 async def leaderboard(message):
+  await bot.send_chat_action(message.from_user.id, 'typing')
   dragons_leaders = db_service.get_leaderboard(30)
   dragon_ids = [key for key in dragons_leaders]
   dragon_ids.reverse()
@@ -385,6 +432,23 @@ async def leaderboard(message):
     dragon_height = dragon['height']
     text += '\n{3}. @{0} - <b>{1}</b> ({2} см)'.format(owner['username'], dragon_genus_title, dragon_height, index)
   await send(message, text)
+
+@dp.message_handler(commands=['princess'])
+async def princess(message):
+  princess = db_service.get_db(PRINCESS_DB_KEY)
+  if princess['owner_id'] == 0:
+    await send(message, 'Принцесса всё ещё не найдена!')
+    return
+
+  days = int((time.time() * 1000 - princess['updated_at']) // 1000 // 60 // 24)
+  long_ago = '{0} {1}'.format(days, define_suffix(days, ['день', 'дня', 'дней']))
+
+  if message.from_user.id == princess['owner_id']:
+    await send(message, f'Нежная и прекрасная принцесса уже <b>{long_ago}</b> находится в ваших умелых руках и приносит дополнительную удачу!')
+    return
+
+  username = princess['owner_username']
+  await send(message, f'Нежная и прекрасная принцесса уже <b>{long_ago}</b> находится в умелых руках @{username} и принося с собой дополнительную удачу!\nОднако, каждый день драконы всех мастей стараются её заполучить в бою, ведь эта возможность есть у каждого, в том числе и у вас.\n\nОтправьте своего дракона в бой и испытайте свою удачу!\n\n/dragons - Мои драконы')
 
 @dp.message_handler(commands=['dracoins'])
 async def dracoins(message):
@@ -407,14 +471,29 @@ async def buy_egg(message):
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
   await send(message, 'Поздравляю!\nТы приобрел яйцо!\n\n/eggs - Проверить яйца')
 
+@dp.errors_handler(exception=BotBlocked)
+async def bot_blocked_handler(update: Update, exception: BotBlocked):
+  print('EXCEPTION: Bot was blocked by user')
+  print('update:', update)
+  print('exception:', exception)
+  return True
+
 @dp.message_handler()
-async def public_message(message):
+async def other_messages(message):
+  if is_some_words_in_text(start_words, message.text):
+    await send_welcome(message)
+
   if message.from_user.id not in admins:
     await bot.send_message(admins[0], 'Message from <b>@{0} [{1}]</b>: {2}'.format(message.from_user.username, message.from_user.id, message.text), parse_mode='html')
   else:
     users = db_service.get_db(USERS_DB_KEY)
     for id in users.keys():
-      await bot.send_message(id, message.text, parse_mode='html')
+      try:
+        await bot.send_message(id, message.text, parse_mode='html')
+      except:
+        # TODO: Удалять данные этих пользователей из базы
+        print(f'ERROR: Bot was blocked by user or something went wrong. User ID: {id}')
+        print(f'USERNAME:' f'{users[id]["username"]}')
 
 def add_user_to_db(id, username):
   if db_service.is_obj_exists(USERS_DB_KEY, id):
@@ -494,3 +573,22 @@ def define_suffix(value, suffixes):
 
 def get_dracoins_text(dracoins):
   return '{0} {1}'.format(dracoins, define_suffix(dracoins, ['дракоин', 'дракоина', 'дракоинов']))
+
+def get_default_princess():
+  princess = { 'owner_id': 0 }
+  princess['owner_username'] = ''
+  princess['updated_at'] = time.time() * 1000
+  return princess
+
+def set_princess(user_id, user_name):
+  princess = { 'owner_id': user_id }
+  princess['owner_username'] = user_name
+  princess['updated_at'] = time.time() * 1000
+  db_service.save_db(PRINCESS_DB_KEY, princess)
+  return princess
+
+def is_some_words_in_text(words, text):
+  for word in words:
+    if word in text.lower():
+      return True
+  return False
