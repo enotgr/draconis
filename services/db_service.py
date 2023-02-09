@@ -18,7 +18,7 @@ class DBService:
   
   def set_obj_by_id(self, db_name, id, obj):
     return db.reference('/{0}/{1}'.format(db_name, id)).set(obj)
-  
+
   def is_obj_exists(self, db_name, id):
     return not not db.reference('/{0}/{1}'.format(db_name, id)).get()
   

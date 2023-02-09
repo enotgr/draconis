@@ -55,20 +55,20 @@ async def buy_500_dracoins(callback: types.CallbackQuery):
   await callback.message.delete()
   await send_invoice(callback.message, 500, 50)
 
-@dp.callback_query_handler(text='1000')
-async def buy_100_dracoins(callback: types.CallbackQuery):
+@dp.callback_query_handler(text='1100')
+async def buy_1100_dracoins(callback: types.CallbackQuery):
   await callback.message.delete()
-  await send_invoice(callback.message, 1000, 95)
+  await send_invoice(callback.message, 1100, 100)
 
-@dp.callback_query_handler(text='2500')
-async def buy_2500_dracoins(callback: types.CallbackQuery):
+@dp.callback_query_handler(text='2300')
+async def buy_2300_dracoins(callback: types.CallbackQuery):
   await callback.message.delete()
-  await send_invoice(callback.message, 2500, 230)
+  await send_invoice(callback.message, 2300, 200)
 
-@dp.callback_query_handler(text='5000')
-async def buy_5000_dracoins(callback: types.CallbackQuery):
+@dp.callback_query_handler(text='5900')
+async def buy_5900_dracoins(callback: types.CallbackQuery):
   await callback.message.delete()
-  await send_invoice(callback.message, 5000, 445)
+  await send_invoice(callback.message, 5900, 500)
 
 @dp.message_handler(commands=['donate'])
 async def donate(message: types.Message):
@@ -159,16 +159,16 @@ def create_keyboard():
     callback_data='500')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='1000 дракоинов [95 RUB]',
-    callback_data='1000')
+    text='1100 дракоинов [100 RUB]',
+    callback_data='1100')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='2500 дракоинов [230 RUB]',
-    callback_data='2500')
+    text='2300 дракоинов [200 RUB]',
+    callback_data='2300')
   )
   keyboard.add(types.InlineKeyboardButton(
-    text='5000 дракоинов [445 RUB]',
-    callback_data='5000')
+    text='5900 дракоинов [500 RUB]',
+    callback_data='5900')
   )
   return keyboard
 

@@ -30,5 +30,15 @@ class FileService:
     except:
       print('Error: cannot read text file.')
     return text
+  
+  def saveTextFile(self, text, path):
+    try:
+      file = open(path, 'w', encoding='utf-8')
+      file.write(text)
+      file.close()
+      return True
+    except:
+      print('Error: cannot save text file.')
+      return False
 
 file_service = FileService()

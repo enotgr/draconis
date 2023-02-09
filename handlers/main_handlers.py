@@ -10,11 +10,13 @@ from consts.dragon_genuses import dragon_genuses, dragon_genuses_titles
 from consts.dragon_sex import dragon_sex, dragons_sex_titles
 from consts.dragon_statuses import dragon_statuses, dragon_statuses_titles
 from consts.common import start_words, egg_price
+from handlers.match_handlers import send_match
 from aiogram.utils.deep_linking import get_start_link
 from aiogram.utils.exceptions import BotBlocked
 from aiogram.types import InputFile, Update
 from asyncio import sleep
 from random import randint
+import qrcode
 import time
 
 @dp.message_handler(commands=['start'])
@@ -26,6 +28,14 @@ async def send_welcome(message):
   first_name = user_info.first_name
   name = first_name if first_name else username
 
+  if not username:
+    username = name
+  if not username:
+    heroes_count = int(file_service.getTextFileByPath('texts/unknown_heroes_count.txt')) + 1
+    file_service.saveTextFile(str(heroes_count), 'texts/unknown_heroes_count.txt')
+    username = f'unknown_hero_{heroes_count}_draconis'
+    name = f'unknown_hero_{heroes_count}_draconis'
+
   await rules(message)
   await bot.send_chat_action(message.from_user.id, 'typing')
   await sleep(3)
@@ -35,7 +45,7 @@ async def send_welcome(message):
     return
 
   if unique_code:
-    await add_referal_egg(unique_code, username)
+    await add_referal_egg(unique_code, name)
 
   await send(message, '<i><b>Странник:</b>\n- Приветствую, <b>{0}</b>!\nТы проделал длинный путь, чтобы найти меня. За это я дарю тебе свое яйцо.</i>'.format(name))
   await send(message, 'Ваш инвентарь был пополнен.\n\n/eggs - Проверить яйца')
@@ -48,10 +58,14 @@ async def rules(message):
     return
   await send(message, rules)
 
-@dp.message_handler(commands=['ref'])
+@dp.message_handler(commands=['ref', 'qrcore', 'qr', 'ref_link'])
 async def ref(message):
   link = await get_start_link(message.from_user.id)
-  await send(message, f'{link}\n\nСкопируй эту ссылку и отправь другу.\nЗа каждого приведённого друга ты получишь по дополнительному яйцу!')
+  img = qrcode.make(link)
+  img.save('qr_temp.jpg')
+  await send(message, f'Реферальная ссылка:\n{link}')
+  await bot.send_photo(message.chat.id, photo=open('qr_temp.jpg', 'rb'))
+  await send(message, 'Просто отправьте ссылку другу или покажите ему qrcode!\nЗа каждого приведённого друга вы получите по яйцу!')
 
 @dp.message_handler(commands=['image'])
 async def img(message):
@@ -250,10 +264,7 @@ async def fight(message):
     await send(message, '{0} мертв. Он не может драться. Он уже ничего не может...\n\n/rip_dragon_{1} - Сжечь дракона\n/dragons - Мои драконы'.format(dragon_name, dragon_number))
     return
 
-  # response = await bot.send_dice(message.from_user.id)
   fight_result = await dice(message)
-  # await sleep(3)
-  # await send(message, f'Результат броска: {fight_result}')
 
   princess = db_service.get_db(PRINCESS_DB_KEY)
   if not princess:
@@ -274,15 +285,15 @@ async def fight(message):
       await send(message, text)
     elif dragon['status'] == dragon_statuses[2]:
       dragon['status'] = dragon_statuses[3]
-      text += 'Более того, твой дракон доблестно погиб в бою. Очень жаль, хороший был дракон.\n\n/dragons - Мои драконы'
+      text += 'Более того, ваш дракон доблестно погиб в бою. Очень жаль, хороший был дракон.\n\n/dragons - Мои драконы'
       await send(message, text)
     db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
     return
   text += '{0} вернулся с победой!\n'.format(dragon_name)
-  earnings = randint(30, 90)
+  earnings = randint(50, 150)
   user['dracoins'] = user['dracoins'] + earnings
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
-  text += '{0} принес с собой {1}!\n\n/dragon_{2} - {0}\n/dragons - Мои драконы'.format(dragon_name, get_dracoins_text(earnings), dragon_number)
+  text += '{0} принес с собой {1}!\n\n/fight_dragon_{2} - Отправить в бой\n/dragon_{2} - {0}\n/dragons - Мои драконы'.format(dragon_name, get_dracoins_text(earnings), dragon_number)
   await send(message, text)
 
   princess_random = randint(0, 100)
@@ -340,23 +351,25 @@ async def feed(message):
   if dragon['status'] == dragon_statuses[3]:
     await send(message, 'Этот дракон не может есть, так как он мертв.\n\n/rip_dragon_{0} - Сжечь дракона'.format(dragon_number))
     return
-
-  if dragon['status'] == dragon_statuses[2]:
-    dragon['status'] = dragon_statuses[1]
-    await send(message, '<i>Дракон вылечился и уже чувствует себя гораздо лучше!</i>')
-
-  grow = randint(1, 10)
-  dragon['height'] = dragon['height'] + grow
-  dragon['feed_at'] = time.time() * 1000
-  db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
-
+  
   dracoins -= 100
   user['dracoins'] = dracoins
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
+  await send(message, '<i>Потрачено <b>100</b> дракоинов.\nОстаток: {0}</i>'.format(get_dracoins_text(user['dracoins'])))
 
-  genus_title = get_dragon_genus_title(dragon['type'], dragon['genus'])
-  dragon_name = dragon['name'] if dragon['name'] else genus_title
-  await send(message, '<i>Потрачено <b>100</b> дракоинов.\nОстаток: {0}</i>\n\n/dracoins - Проверить кошелек'.format(get_dracoins_text(user['dracoins'])))
+  dragon['feed_at'] = time.time() * 1000
+  dragon_name = dragon['name'] if dragon['name'] else get_dragon_genus_title(dragon['type'], dragon['genus'])
+
+  if dragon['status'] == dragon_statuses[2]:
+    dragon['status'] = dragon_statuses[1]
+    db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
+    await send(message, '<i>Дракон вылечился и уже чувствует себя гораздо лучше!</i>\n\n/fight_dragon_{0} - Отправить в бой\n/dragon_{0} - {1}'.format(dragon_number, dragon_name))
+    return
+
+  grow = randint(1, 10)
+  dragon['height'] = dragon['height'] + grow
+  db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
+
   await send(message, '{0} вырос на <b>{1}</b> см!\n\n/dragon_{2} - {3}\n/leaderboard - Топ лидеров'.format(dragon_name, grow, dragon_number, dragon_name))
 
 @dp.message_handler(commands=['rip_dragon_1', 'rip_dragon_2', 'rip_dragon_3', 'rip_dragon_4', 'rip_dragon_5', 'rip_dragon_6', 'rip_dragon_7'])
@@ -430,7 +443,7 @@ async def leaderboard(message):
     owner = db_service.get_obj_by_id(USERS_DB_KEY, dragon['owner'])
     dragon_genus_title = get_dragon_genus_title(dragon['type'], dragon['genus'])
     dragon_height = dragon['height']
-    text += '\n{3}. @{0} - <b>{1}</b> ({2} см)'.format(owner['username'], dragon_genus_title, dragon_height, index)
+    text += '\n<b>{3}.</b>{4} @{0} - <b>{1}</b> ({2} см)'.format(owner['username'], dragon_genus_title, dragon_height, index, get_leaderboard_place(index))
   await send(message, text)
 
 @dp.message_handler(commands=['princess'])
@@ -448,7 +461,7 @@ async def princess(message):
     return
 
   username = princess['owner_username']
-  await send(message, f'Нежная и прекрасная принцесса уже <b>{long_ago}</b> находится в умелых руках @{username} и принося с собой дополнительную удачу!\nОднако, каждый день драконы всех мастей стараются её заполучить в бою, ведь эта возможность есть у каждого, в том числе и у вас.\n\nОтправьте своего дракона в бой и испытайте свою удачу!\n\n/dragons - Мои драконы')
+  await send(message, f'Нежная и прекрасная принцесса уже <b>{long_ago}</b> находится в умелых руках @{username}, принося с собой дополнительную удачу!\nОднако, каждый день драконы всех мастей стараются её заполучить в бою, ведь эта возможность есть у каждого, в том числе и у вас.\n\nОтправьте своего дракона в бой и испытайте свою удачу!\n\n/dragons - Мои драконы')
 
 @dp.message_handler(commands=['dracoins'])
 async def dracoins(message):
@@ -483,6 +496,10 @@ async def other_messages(message):
   if is_some_words_in_text(start_words, message.text):
     await send_welcome(message)
 
+  if message.text[:1] == '@':
+    await send_match(message.from_user.id, message.text[1:])
+    return
+
   if message.from_user.id not in admins:
     await bot.send_message(admins[0], 'Message from <b>@{0} [{1}]</b>: {2}'.format(message.from_user.username, message.from_user.id, message.text), parse_mode='html')
   else:
@@ -499,7 +516,7 @@ def add_user_to_db(id, username):
   if db_service.is_obj_exists(USERS_DB_KEY, id):
     print('WARN: User is already exists')
     return False
-  
+
   new_user = { 'username': username }
   new_user['created_at'] = time.time() * 1000
   new_user['dracoins'] = 100
@@ -545,7 +562,7 @@ def get_dragon_genus_title(type, genus):
 def extract_unique_code(text):
   return text.split()[1] if len(text.split()) > 1 else None
 
-async def add_referal_egg(unique_code, username):
+async def add_referal_egg(unique_code, name):
   user = None
   try:
     user = db_service.get_obj_by_id(USERS_DB_KEY, unique_code)
@@ -555,7 +572,7 @@ async def add_referal_egg(unique_code, username):
 
   user['eggs'] = user['eggs'] + 1
   db_service.set_obj_by_id(USERS_DB_KEY, unique_code, user)
-  await bot.send_message(unique_code, f'Ваш друг <b>{username}</b> зарегистрировался по вашей реферальной ссылке и принёс вам дополнительное яйцо!\n\n/eggs - Драконьи яйца', parse_mode='html')
+  await bot.send_message(unique_code, f'Ваш друг <b>{name}</b> зарегистрировался по вашей реферальной ссылке и принёс вам дополнительное яйцо!\n\n/eggs - Драконьи яйца', parse_mode='html')
 
 def define_suffix(value, suffixes):
   if len(suffixes) != 3:
@@ -592,3 +609,12 @@ def is_some_words_in_text(words, text):
     if word in text.lower():
       return True
   return False
+
+def get_leaderboard_place(index):
+  if index == 1:
+    return ' 🥇'
+  if index == 2:
+    return ' 🥈'
+  if index == 3:
+    return ' 🥉'
+  return ''
