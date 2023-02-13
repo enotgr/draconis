@@ -36,10 +36,6 @@ async def send_welcome(message):
     username = f'unknown_hero_{heroes_count}_draconis'
     name = f'unknown_hero_{heroes_count}_draconis'
 
-  await rules(message)
-  await bot.send_chat_action(message.from_user.id, 'typing')
-  await sleep(3)
-
   if not add_user_to_db(id, username):
     await send(message, 'Ну, привет, {0}.'.format(name))
     return
@@ -48,11 +44,19 @@ async def send_welcome(message):
     await add_referal_egg(unique_code, name)
 
   await send(message, '<i><b>Странник:</b>\n- Приветствую, <b>{0}</b>!\nТы проделал длинный путь, чтобы найти меня. За это я дарю тебе свое яйцо.</i>'.format(name))
-  await send(message, 'Ваш инвентарь был пополнен.\n\n/eggs - Проверить яйца')
+  await send(message, 'Ваш инвентарь был пополнен.\n\n/eggs - Проверить яйца\n/rules - Правила игры')
 
 @dp.message_handler(commands=['rules', 'help', 'info'])
 async def rules(message):
   rules = file_service.getTextFileByPath('texts/rules.txt')
+  if not rules:
+    print('ERR: Invalid rules file')
+    return
+  await send(message, rules)
+
+@dp.message_handler(commands=['match_rules'])
+async def match_rules(message):
+  rules = file_service.getTextFileByPath('texts/about_matches.txt')
   if not rules:
     print('ERR: Invalid rules file')
     return
@@ -190,7 +194,7 @@ async def dragon_index(message):
     text += '\n/name_dragon_{0} ИМЯ - Дать имя дракону'.format(dragon_number)
 
   if dragon['status'] == dragon_statuses[3]:
-    text += '\n\n/rip_dragon_{0} - Сжечь дракона [50 дракоинов]'.format(dragon_number)
+    text += '\n\n/rip_dragon_{0} - Сжечь дракона [150 дракоинов]'.format(dragon_number)
 
   await send(message, text)
 
@@ -403,11 +407,11 @@ async def rip(message):
   if get_delta() // 3600 > 11:
     top_up = 'завтра'
   user = db_service.get_obj_by_id(USERS_DB_KEY, message.from_user.id)
-  if user['dracoins'] < 50:
-    await send(message, f'У вас не достаточно монет.\nЦеремония сожжения обойдётся вам в 50 дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек.\n/donate - Купить дракоины')
+  if user['dracoins'] < 150:
+    await send(message, f'У вас не достаточно монет.\nЦеремония сожжения обойдётся вам в 150 дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек.\n/donate - Купить дракоины')
     return
 
-  user['dracoins'] = user['dracoins'] - 50
+  user['dracoins'] = user['dracoins'] - 150
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
 
   dragons.remove(dragon_id)
@@ -495,6 +499,7 @@ async def bot_blocked_handler(update: Update, exception: BotBlocked):
 async def other_messages(message):
   if is_some_words_in_text(start_words, message.text):
     await send_welcome(message)
+    return
 
   if message.text[:1] == '@':
     await send_match(message.from_user.id, message.text[1:])

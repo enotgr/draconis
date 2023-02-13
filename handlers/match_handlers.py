@@ -228,7 +228,7 @@ async def can_participate_match(user_id, user):
   has_old_alive_dragon = False
   for dragon_id in dragons:
     dragon = db_service.get_obj_by_id(DRAGONS_DB_KEY, dragon_id)
-    if dragon['status'] == dragon_statuses[1] and dragon['height'] >= 10:
+    if dragon['status'] == dragon_statuses[1] and dragon['height'] >= 100:
       has_old_alive_dragon = True
   if not has_old_alive_dragon:
     await bot.send_message(user_id, 'Для участия в дуэле у вас должен быть хотя бы один здоровый дракон ростом не менее 10 см.\n\n/dragons - Мои драконы')
