@@ -330,7 +330,7 @@ async def feed(message):
     top_up = 'завтра'
 
   if dracoins < 100:
-    await send(message, f'У вас не достаточно монет.\nКорм для дракона стоит <b>100</b> дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек.\n/donate - Купить дракоины')
+    await send(message, f'У вас не достаточно монет.\nКорм для дракона стоит <b>100</b> дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек\n/donate - Купить дракоины')
     return
 
   dragon_number = int(message.text.split('_')[2])
@@ -355,7 +355,7 @@ async def feed(message):
   if dragon['status'] == dragon_statuses[3]:
     await send(message, 'Этот дракон не может есть, так как он мертв.\n\n/rip_dragon_{0} - Сжечь дракона'.format(dragon_number))
     return
-  
+
   dracoins -= 100
   user['dracoins'] = dracoins
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
@@ -366,7 +366,9 @@ async def feed(message):
 
   if dragon['status'] == dragon_statuses[2]:
     dragon['status'] = dragon_statuses[1]
+    dragon['height'] = dragon['height'] + 1
     db_service.set_obj_by_id(DRAGONS_DB_KEY, dragon_id, dragon)
+    await send(message, '{0} вырос на <b>1</b> см.'.format(dragon_name))
     await send(message, '<i>Дракон вылечился и уже чувствует себя гораздо лучше!</i>\n\n/fight_dragon_{0} - Отправить в бой\n/dragon_{0} - {1}'.format(dragon_number, dragon_name))
     return
 
@@ -408,7 +410,7 @@ async def rip(message):
     top_up = 'завтра'
   user = db_service.get_obj_by_id(USERS_DB_KEY, message.from_user.id)
   if user['dracoins'] < 150:
-    await send(message, f'У вас не достаточно монет.\nЦеремония сожжения обойдётся вам в 150 дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек.\n/donate - Купить дракоины')
+    await send(message, f'У вас не достаточно монет.\nЦеремония сожжения обойдётся вам в 150 дракоинов.\nСледующее пополнение будет {top_up}!\n\n/dracoins - Проверить кошелек\n/donate - Купить дракоины')
     return
 
   user['dracoins'] = user['dracoins'] - 150
@@ -481,7 +483,7 @@ async def buy_egg(message):
   user = db_service.get_obj_by_id(USERS_DB_KEY, message.from_user.id)
   dracoins = user['dracoins']
   if dracoins < egg_price:
-    await send(message, 'У вас не достаточно монет. Яйцо дракона стоит {0} дракоинов.\n\n/dracoins - Проверить кошелек.\n/donate - Купить дракоины'.format(egg_price))
+    await send(message, 'У вас не достаточно монет. Яйцо дракона стоит {0} дракоинов.\n\n/dracoins - Проверить кошелек\n/donate - Купить дракоины'.format(egg_price))
     return
   user['eggs'] = user['eggs'] + 1
   user['dracoins'] = dracoins - egg_price

@@ -179,18 +179,18 @@ async def send_success(user_id, payment):
 
 async def send_success_admin(user_id, username, payment_id, payment):
   text = 'Успешная транзакция:\n'
-  text += f'user_id: {user_id}'
-  text += f'username: @{username}'
-  text += f'payment_id: {payment_id}'
-  text += f'amount: {str(payment.amount.value)} {str(payment.amount.currency)}'
+  text += f'\nuser_id: {user_id}'
+  text += f'\nusername: @{username}'
+  text += f'\npayment_id: {payment_id}'
+  text += f'\namount: {str(payment.amount.value)} {str(payment.amount.currency)}'
   await bot.send_message(admins[0], text)
 
 async def send_problem_admin(user_id, username, payment_id, payment):
   text = 'Проблемы с оплатой:\n'
-  text += f'user_id: {user_id}'
-  text += f'username: @{username}'
-  text += f'payment_id: {payment_id}'
-  text += f'payment_status: {payment.status}'
+  text += f'\nuser_id: {user_id}'
+  text += f'\nusername: @{username}'
+  text += f'\npayment_id: {payment_id}'
+  text += f'\npayment_status: {payment.status}'
   await bot.send_message(admins[0], text)
 
 # Этот код пригодится, когда платёжная система будет готова
