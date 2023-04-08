@@ -62,7 +62,7 @@ async def match_rules(message):
     return
   await send(message, rules)
 
-@dp.message_handler(commands=['ref', 'qrcore', 'qr', 'ref_link'])
+@dp.message_handler(commands=['ref', 'qrcode', 'qr', 'ref_link'])
 async def ref(message):
   link = await get_start_link(message.from_user.id)
   img = qrcode.make(link)
@@ -313,7 +313,10 @@ async def fight(message):
   if old_owner_id != 0:
     loss_text = '<b>Принцесса исчезла!</b>\nПринцесса, которая когда-то была под вашим крылом, теперь исчезла, оставив вас с тяжелым сердцем. Она была захвачена другим игроком и теперь вне вашей досягаемости.\n\n'
     loss_text += '<b>-1 к удаче.</b>\nУдача покинула вас. Теперь, если при броске кости выпадет число меньше <b>4</b>, ваш дракон будет побежден.'
-    await bot.send_message(old_owner_id, loss_text, parse_mode='html')
+    try:
+      await bot.send_message(old_owner_id, loss_text, parse_mode='html')
+    except:
+      print('ERROR: User who has princess blocked the Draconis')
 
   set_princess(message.from_user.id, user['username'])
   text_princess = '<b>Принцесса с вами!</b>\nДракон вернулся с поля битвы не только с сокровищами, но и с прекрасной принцессой, которая теперь под вашим крылом!\n\n'
@@ -499,12 +502,12 @@ async def bot_blocked_handler(update: Update, exception: BotBlocked):
 
 @dp.message_handler()
 async def other_messages(message):
-  if is_some_words_in_text(start_words, message.text):
-    await send_welcome(message)
-    return
-
   if message.text[:1] == '@':
     await send_match(message.from_user.id, message.text[1:])
+    return
+
+  if is_some_words_in_text(start_words, message.text):
+    await send_welcome(message)
     return
 
   if message.from_user.id not in admins:
