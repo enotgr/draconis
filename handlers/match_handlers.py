@@ -52,7 +52,7 @@ async def send_match(user_id, username_target):
       reply_markup=keyboard
     )
   except:
-    await bot.send_message(user_id, f'<b><i>Герой @{username_target} покинул мир Draconis. Дуэль не состоится</i></b>')
+    await bot.send_message(user_id, f'<b><i>Герой @{username_target} покинул мир Draconis. Дуэль не состоится</i></b>', parse_mode='html')
     return
 
   await bot.send_message(user_id, f'Герою @{username_target} отправлен вызов на дуэль!')
