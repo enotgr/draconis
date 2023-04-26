@@ -493,6 +493,13 @@ async def buy_egg(message):
   db_service.set_obj_by_id(USERS_DB_KEY, message.from_user.id, user)
   await send(message, 'Поздравляю!\nТы приобрел яйцо!\n\n/eggs - Проверить яйца')
 
+@dp.message_handler(commands=['users'])
+async def get_users_count_admin(message):
+  if message.from_user.id not in admins:
+    return
+  users_count = len(db_service.get_db(USERS_DB_KEY).keys())
+  await send(message, f'Количество пользователей: <b>{users_count}</b>')
+
 @dp.errors_handler(exception=BotBlocked)
 async def bot_blocked_handler(update: Update, exception: BotBlocked):
   print('EXCEPTION: Bot was blocked by user')
