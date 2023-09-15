@@ -231,7 +231,7 @@ async def can_participate_match(user_id, user):
     if dragon['status'] == dragon_statuses[1] and dragon['height'] >= 100:
       has_old_alive_dragon = True
   if not has_old_alive_dragon:
-    await bot.send_message(user_id, 'Для участия в дуэле у вас должен быть хотя бы один здоровый дракон ростом не менее 10 см.\n\n/dragons - Мои драконы')
+    await bot.send_message(user_id, 'Для участия в дуэле у вас должен быть хотя бы один здоровый дракон ростом не менее 100 см.\n\n/dragons - Мои драконы')
 
   return has_old_alive_dragon
 

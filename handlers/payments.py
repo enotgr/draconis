@@ -1,5 +1,5 @@
 from misc import dp, bot
-from utils.handler_utils import send
+# from utils.handler_utils import send
 from services import db_service
 from consts.db_keys import USERS_DB_KEY, PAYMENTS_DB_KEY
 from consts.payment_consts import config, dracoins_by_cost, payment_statuses
@@ -23,7 +23,7 @@ async def status(callback: types.CallbackQuery):
   payment_id = callback.data.split(':')[1]
   payment = Payment.find_one(payment_id)
   payment_db = db_service.get_obj_by_id(PAYMENTS_DB_KEY, payment_id)
-  if payment_db['status'] == payment_statuses[3]:
+  if payment_db['status'] == payment_statuses[2]:
     await send_success(callback.message.chat.id, payment)
     return
 
@@ -42,7 +42,7 @@ async def status(callback: types.CallbackQuery):
   elif payment.status == payment_statuses[3]:
     text += 'Платеж отменен.'
   else:
-    text += 'Что-то пошло не так. Поробуйте проверить позже или обратитесь в поддержку.\n\n/support - Поддержка'
+    text += 'Что-то пошло не так. Поробуйте проверить позже'
     user = db_service.get_obj_by_id(USERS_DB_KEY, callback.message.chat.id)
     await send_problem_admin(callback.message.chat.id, user['username'], payment_id, payment)
 
@@ -112,9 +112,13 @@ async def send_invoice(message, dracoins, amount):
 async def check_payment(user_id, payment_id):
   payment = Payment.find_one(payment_id)
   i = 0
-  while payment.status == payment_statuses[0] or payment.status == payment_statuses[1] or i > 180:
+  while payment.status == payment_statuses[0] or payment.status == payment_statuses[1]:
+    i = i + 1
     payment = Payment.find_one(payment_id)
     await asyncio.sleep(5)
+
+    if i == 180:
+      break
 
   payment_db = db_service.get_obj_by_id(PAYMENTS_DB_KEY, payment_id)
   if payment_db['status'] == payment_statuses[2]:

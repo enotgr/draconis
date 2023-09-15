@@ -536,7 +536,7 @@ def add_user_to_db(id, username):
 
   new_user = { 'username': username }
   new_user['created_at'] = time.time() * 1000
-  new_user['dracoins'] = 100
+  new_user['dracoins'] = 1000
   new_user['eggs'] = 1
 
   db_service.set_obj_by_id(USERS_DB_KEY, id, new_user)
