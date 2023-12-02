@@ -4,7 +4,7 @@ from services.db_service import db_service
 from consts.db_keys import USERS_DB_KEY
 from misc import bot
 
-event_hours = 13
+event_hours = 10
 
 def get_delta():
   now = datetime.now()
