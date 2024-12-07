@@ -9,3 +9,4 @@ draconis-bot-firebase.json
 /consts/payment_consts.py
 /consts/database_url.py
 qr_temp.jpg
+venv
